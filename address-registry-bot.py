@@ -19,7 +19,7 @@ Entry = Query()
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='$', description="", intents=intents)
+bot = commands.Bot(command_prefix='!', description="", intents=intents)
 
 
 def getFullName(ctx):
@@ -32,6 +32,18 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
+
+
+@bot.event
+async def on_message(message):
+    if not ((message.channel.id == COMMANDS_CHANNEL_ID) or isinstance(message.channel, discord.channel.DMChannel)):
+        '''
+        Ignore all messages that are not coming from the commands channel or DMs
+        '''
+        print("ignoring")
+        return
+
+    await bot.process_commands(message)
 
 
 def has_role_in_server(role: str, guildId: int):
@@ -50,26 +62,12 @@ def has_role_in_server(role: str, guildId: int):
     return commands.check(predicate)
 
 
-def command_channel_restriction(botChannelId: int):
-    '''
-    Check if context is in the commands channel or bot DM
-    '''
-    def predicate(ctx):
-        return (isinstance(ctx.channel, discord.channel.DMChannel) or (ctx.channel.id == botChannelId))
-    return commands.check(predicate)
-
-
 @bot.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        return
-    elif isinstance(error, (commands.MissingRole, commands.MissingAnyRole)):
-        print(f'{getFullName(ctx)} attempted to execute command without permission on message {ctx.message.id}')
     await ctx.send(error)
 
 
 @bot.command()
-@command_channel_restriction(COMMANDS_CHANNEL_ID)
 @has_role_in_server(ALLOW_ROLE, GUILD_ID)
 async def registerWallet(ctx, address: str):
     '''
@@ -83,9 +81,7 @@ async def registerWallet(ctx, address: str):
     await checkWallet(ctx)
 
 
-
 @bot.command()
-@command_channel_restriction(COMMANDS_CHANNEL_ID)
 @has_role_in_server(ALLOW_ROLE, GUILD_ID)
 async def removeWallet(ctx):
     '''
@@ -99,7 +95,7 @@ async def removeWallet(ctx):
 
 
 @bot.command()
-@command_channel_restriction(COMMANDS_CHANNEL_ID)
+@has_role_in_server(ALLOW_ROLE, GUILD_ID)
 async def checkWallet(ctx):
     '''
     Check the registered address for a given user
